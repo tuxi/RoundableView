@@ -59,27 +59,9 @@ public extension RoundableView where Self: UIView {
             layer.mask = nil
         }
     }
-    
-    @discardableResult
-    private func _round(corners: UIRectCorner, radius: CGFloat) -> CAShapeLayer {
-        let path = UIBezierPath(roundedRect: bounds, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
-        let mask = CAShapeLayer()
-        mask.path = path.cgPath
-        layer.mask = mask
-        return mask
-    }
 }
 
 extension UIView: RoundableView {
-    
-    private var round: Round? {
-        get {
-            return objc_getAssociatedObject(self, &Keys.round) as? Round
-        }
-        set {
-            objc_setAssociatedObject(self, &Keys.round, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-    }
     
     public var roundMethod: RoundingMethod {
         get {
@@ -130,10 +112,29 @@ private class Round: NSObject {
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
         let new = change?[.newKey] as? CGRect ?? .zero
         let old = change?[.oldKey] as? CGRect ?? .zero
-//        debugPrint(bounds)
+        //        debugPrint(bounds)
         if keyPath == self.keyPath, !old.equalTo(new) {
             target?.applyRounding()
         }
     }
 }
 
+fileprivate extension UIView {
+    var round: Round? {
+        get {
+            return objc_getAssociatedObject(self, &Keys.round) as? Round
+        }
+        set {
+            objc_setAssociatedObject(self, &Keys.round, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+    
+    @discardableResult
+    func _round(corners: UIRectCorner, radius: CGFloat) -> CAShapeLayer {
+        let path = UIBezierPath(roundedRect: bounds, byRoundingCorners: corners, cornerRadii: CGSize(width: radius, height: radius))
+        let mask = CAShapeLayer()
+        mask.path = path.cgPath
+        layer.mask = mask
+        return mask
+    }
+}
