@@ -119,7 +119,7 @@ private class Round: NSObject {
     }
 }
 
-fileprivate extension UIView {
+private extension UIView {
     var round: Round? {
         get {
             return objc_getAssociatedObject(self, &Keys.round) as? Round
