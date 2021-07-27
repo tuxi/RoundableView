@@ -17,6 +17,7 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
         button.roundMethod = .complete()
+        button.border = UIView.Border(width: 1, color: .red)
         
         let timer = Timer(timeInterval: 1, repeats: true) { [weak self] timer in
             guard let `self` = self else {

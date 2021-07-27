@@ -19,22 +19,32 @@ extension UIView {
         case none
     }
     
-    /// 用于关联对象的keys
+    public struct Border {
+        public var width: CGFloat
+        public var color: UIColor
+        public init(width: CGFloat, color: UIColor = .white) {
+            self.width = width
+            self.color = color
+        }
+    }
+
     private struct Keys {
         static var round = "com.objc.round"
     }
 }
 
 /// `UIView` 便捷添加圆角的协议
+/// 解决在``view.frame`改变时圆角未改变的问题，以及使用系统方法设置圆角必须设置`layer.masksToBounds`导致无法添加阴影的问题
 public protocol RoundableView where Self: UIView {
     
     /// 圆角方法，分为：完整圆角、部分圆角、无
-    /// 解决在`view`改变时圆角未改变的问题
     var roundMethod: RoundingMethod { get set }
     /// 圆角的角，分为：上、下、左、右、全部
-    /// 解决在`view`改变时圆角未改变的问题
     var roundedCorners: UIRectCorner { get set }
-    /// 切圆角
+    /// 边框，由于圆角是设置了`view.mask`属性，会导致使用系统方法添加圆角无效，所以扩展了`border`属性
+    var border: Border? { get set }
+    
+    /// 更新圆角和边框
     func applyRounding()
 }
 
@@ -57,11 +67,30 @@ public extension RoundableView where Self: UIView {
             self._round(corners: roundedCorners, radius: radius)
         case .none:
             layer.mask = nil
+            if let border = self.border {
+                layer.borderWidth = border.width
+                layer.borderColor = border.color.cgColor
+            }
         }
     }
 }
 
 extension UIView: RoundableView {
+    public var border: Border? {
+        get {
+            return self.round?.border
+        }
+        set {
+            if self.round == nil {
+                self.round = Round(target: self)
+            }
+            self.round?.border = newValue
+            DispatchQueue.main.async {
+                self.applyRounding()
+            }
+        }
+    }
+    
     
     public var roundMethod: RoundingMethod {
         get {
@@ -92,12 +121,15 @@ extension UIView: RoundableView {
             }
         }
     }
+    
+    
 }
 
 private class Round: NSObject {
     weak var target: UIView?
     var method: UIView.RoundingMethod = .none
     var corners: UIRectCorner = .allCorners
+    var border: UIView.Border? = nil
     let keyPath = "bounds"
     init(target: UIView) {
         super.init()
@@ -135,6 +167,18 @@ private extension UIView {
         let mask = CAShapeLayer()
         mask.path = path.cgPath
         layer.mask = mask
+        
+        if let border = self.border {
+            layer.sublayers?.removeAll(where: { $0 is BorderLayerShapeLayer })
+            let borderLayer = BorderLayerShapeLayer()
+            borderLayer.frame = bounds
+            borderLayer.path = path.cgPath
+            borderLayer.lineWidth = border.width
+            borderLayer.fillColor = UIColor.clear.cgColor
+            borderLayer.strokeColor = border.color.cgColor
+            layer.addSublayer(borderLayer)
+        }
         return mask
     }
 }
+private class BorderLayerShapeLayer: CAShapeLayer {}
